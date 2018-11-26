@@ -19,4 +19,4 @@ Transfer your BinaryHeap code from SP3.  Some minor modifications may be require
    - "javac -cp . sxs179830\BinaryHeap.java"
    - "javac -cp . sxs179830\MST.java"
 - Run the program using following command
-   - "java sxb180066.MST"
+   - "java sxs179830.MST"
