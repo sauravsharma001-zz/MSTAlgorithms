@@ -16,12 +16,7 @@ import rbk.Graph.Timer;
 import sxs179830.BinaryHeap.Index;
 import sxs179830.BinaryHeap.IndexedHeap;
 
-import java.util.Arrays;
-import java.util.PriorityQueue;
-import java.util.Scanner;
-import java.util.Comparator;
-import java.util.List;
-import java.util.LinkedList;
+import java.util.*;
 import java.io.FileNotFoundException;
 import java.io.File;
 
@@ -30,25 +25,71 @@ public class MST extends GraphAlgorithm<MST.MSTVertex> {
     public long wmst;
     List<Edge> mst;
 
+    private static final int INFINITY = Integer.MAX_VALUE;
+
     MST(Graph g) {
         super(g, new MSTVertex((Vertex) null));
     }
 
     public static class MSTVertex implements Index, Comparable<MSTVertex>, Factory {
+
+        boolean seen;
+        Vertex parent;
+        int index;
+        int distance;
+
         MSTVertex(Vertex u) {
+            seen = false;
+            parent = null;
         }
 
         MSTVertex(MSTVertex u) {  // for prim2
+            seen = false;
+            parent = null;
+            distance = INFINITY;
         }
 
         public MSTVertex make(Vertex u) { return new MSTVertex(u); }
 
-        public void putIndex(int index) { }
+        public void putIndex(int index) { index = index;}
 
-        public int getIndex() { return 0; }
+        public int getIndex() { return index; }
 
         public int compareTo(MSTVertex other) {
             return 0;
+        }
+    }
+
+    // getter and setter methods to retrieve and update vertex properties
+    public boolean getSeen(Vertex u) {
+        return get(u).seen;
+    }
+
+    public void setSeen(Vertex u, boolean value) {
+        get(u).seen = value;
+    }
+
+    public Vertex getParent(Vertex u) {
+        return get(u).parent;
+    }
+
+    public void setParent(Vertex u, Vertex p) {
+        get(u).parent = p;
+    }
+
+    public int getDistance(Vertex u) {
+        return get(u).distance;
+    }
+
+    public void setDistance(Vertex u, int distance) {
+        get(u).distance = distance;
+    }
+
+    public void initialize() {
+        for(Vertex u: g) {
+            setSeen(u, false);
+            setParent(u, null);
+            setDistance(u, INFINITY);
         }
     }
 
@@ -68,20 +109,61 @@ public class MST extends GraphAlgorithm<MST.MSTVertex> {
         return wmst;
     }
 
+    /**
+     *
+     * @param s Source Vertex to run Prims II Algorithm
+     * @return weight of minimum spanning tree
+     */
     public long prim2(Vertex s) {
         algorithm = "PriorityQueue<Vertex>";
         mst = new LinkedList<>();
         wmst = 0;
         PriorityQueue<MSTVertex> q = new PriorityQueue<>();
+
         return wmst;
     }
 
+    /**
+     *
+     * @param s Source Vertex to run Prims I Algorithm
+     * @return weight of minimum spanning tree
+     */
     public long prim1(Vertex s) {
+
         algorithm = "PriorityQueue<Edge>";
         mst = new LinkedList<>();
         wmst = 0;
         PriorityQueue<Edge> q = new PriorityQueue<>();
+        Set<Vertex> remainingVertex = new HashSet<>();
+        Edge edge;
+        Vertex fromVertex, toVertex;
+        for(Vertex v : g.getVertexArray()) {
+            remainingVertex.add(v);
+        }
+        initialize();
+        for(Edge e : g.incident(s)) {
+            q.add(e);
+        }
 
+        while(!q.isEmpty()) {
+            edge = q.remove();
+            fromVertex = edge.fromVertex();
+            toVertex = edge.toVertex();
+            setSeen(fromVertex, true);
+            if(!getSeen(toVertex)) {
+                setParent(toVertex, fromVertex);
+                if(remainingVertex.contains(toVertex)) {
+                    mst.add(edge);
+                    wmst += edge.getWeight();
+                    remainingVertex.remove(toVertex);
+                }
+                for(Edge e2 : g.incident(toVertex)) {
+                    if(!getSeen(e2.otherEnd(toVertex))) {
+                        q.add(e2);
+                    }
+                }
+            }
+        }
 
         return wmst;
     }
@@ -107,7 +189,7 @@ public class MST extends GraphAlgorithm<MST.MSTVertex> {
 
     public static void main(String[] args) throws FileNotFoundException {
         Scanner in;
-        int choice = 1;  // Kruskal
+        int choice = 2;  // Kruskal
         if (args.length == 0 || args[0].equals("-")) {
             in = new Scanner(System.in);
         } else {
