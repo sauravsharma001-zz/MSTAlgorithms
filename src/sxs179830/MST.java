@@ -81,6 +81,8 @@ public class MST extends GraphAlgorithm<MST.MSTVertex> {
         mst = new LinkedList<>();
         wmst = 0;
         PriorityQueue<Edge> q = new PriorityQueue<>();
+
+
         return wmst;
     }
 
@@ -105,7 +107,7 @@ public class MST extends GraphAlgorithm<MST.MSTVertex> {
 
     public static void main(String[] args) throws FileNotFoundException {
         Scanner in;
-        int choice = 0;  // Kruskal
+        int choice = 1;  // Kruskal
         if (args.length == 0 || args[0].equals("-")) {
             in = new Scanner(System.in);
         } else {
