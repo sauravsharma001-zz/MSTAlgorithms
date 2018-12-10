@@ -34,55 +34,129 @@ public class MST extends GraphAlgorithm<MST.MSTVertex> {
     public static class MSTVertex implements Index, Comparable<MSTVertex>, Factory {
 
         boolean seen;
-        Vertex parent;
+        MSTVertex parent;
+        Vertex self;
         int index;
         int distance;
+        int rank;
 
         MSTVertex(Vertex u) {
             seen = false;
-            parent = null;
+            parent = this;
+            distance = INFINITY;
+            self = u;
+            rank = 0;
         }
 
         MSTVertex(MSTVertex u) {  // for prim2
             seen = false;
             parent = null;
             distance = INFINITY;
+            rank = 0;
         }
 
         public MSTVertex make(Vertex u) { return new MSTVertex(u); }
 
-        public void putIndex(int index) { index = index;}
+        public MSTVertex find() {
+            if(!this.equals(parent)) {
+                parent = parent.find();
+            }
+            return parent;
+        }
+
+        public void union(MSTVertex rv) {
+            if(this.getRank() > rv.getRank()) {
+                rv.setParent(this);
+            } else if(this.getRank() < rv.getRank()) {
+                this.setParent(rv);
+            } else {
+                this.setRank(this.rank++);
+                rv.setParent(this);
+            }
+
+        }
+
+        public void putIndex(int index) { this.index = index;}
 
         public int getIndex() { return index; }
 
         public int compareTo(MSTVertex other) {
+            // To-do
             return 0;
+        }
+
+        public int getDistance() {
+            return distance;
+        }
+
+        public void setDistance(int distance) {
+            this.distance = distance;
+        }
+
+        public boolean isSeen() {
+            return seen;
+        }
+
+        public void setSeen(boolean seen) {
+            this.seen = seen;
+        }
+
+        public MSTVertex getParent() {
+            return parent;
+        }
+
+        public void setParent(MSTVertex parent) {
+            this.parent = parent;
+        }
+
+        public Vertex getSelf() {
+            return self;
+        }
+
+        public void setSelf(Vertex u) {
+            this.self = u;
+        }
+
+        public int getRank() {
+            return rank;
+        }
+
+        public void setRank(int rank) {
+            this.rank = rank;
         }
     }
 
     // getter and setter methods to retrieve and update vertex properties
     public boolean getSeen(Vertex u) {
-        return get(u).seen;
+        return get(u).isSeen();
     }
 
     public void setSeen(Vertex u, boolean value) {
-        get(u).seen = value;
+        get(u).setSeen(value);
     }
 
-    public Vertex getParent(Vertex u) {
-        return get(u).parent;
+    public MSTVertex getParent(Vertex u) {
+        return get(u).getParent();
     }
 
-    public void setParent(Vertex u, Vertex p) {
-        get(u).parent = p;
+    public void setParent(Vertex u, MSTVertex p) {
+        get(u).setParent(p);
     }
 
     public int getDistance(Vertex u) {
-        return get(u).distance;
+        return get(u).getDistance();
     }
 
     public void setDistance(Vertex u, int distance) {
-        get(u).distance = distance;
+        get(u).setDistance(distance);
+    }
+
+    public Vertex getSelf(Vertex u) {
+        return get(u).getSelf();
+    }
+
+    public void setSelf(Vertex u) {
+        get(u).setSelf(u);
     }
 
     public void initialize() {
@@ -90,6 +164,7 @@ public class MST extends GraphAlgorithm<MST.MSTVertex> {
             setSeen(u, false);
             setParent(u, null);
             setDistance(u, INFINITY);
+            setSelf(u);
         }
     }
 
@@ -98,6 +173,19 @@ public class MST extends GraphAlgorithm<MST.MSTVertex> {
         Edge[] edgeArray = g.getEdgeArray();
         mst = new LinkedList<>();
         wmst = 0;
+        MSTVertex ru, rv;
+        Arrays.sort(edgeArray);
+
+        for(Edge e : edgeArray) {
+            ru = get(e.fromVertex()).find();
+            rv = get(e.toVertex()).find();
+            if(!ru.equals(rv)) {
+                mst.add(e);
+                ru.union(rv);
+                wmst += e.getWeight();
+            }
+        }
+
         return wmst;
     }
 
@@ -106,6 +194,27 @@ public class MST extends GraphAlgorithm<MST.MSTVertex> {
         mst = new LinkedList<>();
         wmst = 0;
         IndexedHeap<MSTVertex> q = new IndexedHeap<>(g.size());
+        MSTVertex u, otherEnd;
+        initialize();
+        for(Vertex v : g.getVertexArray()) {
+            q.add(get(v));
+        }
+        get(s).setDistance(0);
+
+        while(!q.isEmpty()) {
+            u = q.remove();
+            u.setSeen(true);
+            wmst += u.getDistance();
+
+            for(Edge e : g.incident(u.getSelf())) {
+                otherEnd = get(e.otherEnd(u.getSelf()));
+                if(!otherEnd.isSeen() && e.getWeight() < otherEnd.getDistance()) {
+                    otherEnd.setDistance(e.getWeight());
+                    otherEnd.setParent(u);
+                    q.decreaseKey(otherEnd);
+                }
+            }
+        }
         return wmst;
     }
 
@@ -119,7 +228,31 @@ public class MST extends GraphAlgorithm<MST.MSTVertex> {
         mst = new LinkedList<>();
         wmst = 0;
         PriorityQueue<MSTVertex> q = new PriorityQueue<>();
+        Set<Vertex> remainingVertex = new HashSet<>();
+        MSTVertex u;
+        Collections.addAll(remainingVertex, g.getVertexArray());
+        initialize();
+        get(s).setDistance(0);
+        q.add(get(s));
 
+        while(!q.isEmpty()) {
+            u = q.remove();
+            if(!u.isSeen()) {
+                u.setSeen(true);
+                if(remainingVertex.contains(u.getSelf())) {
+                    wmst += u.getDistance();
+                    remainingVertex.remove(u.getSelf());
+                }
+                for(Edge e: g.incident(u.getSelf())) {
+                    MSTVertex otherEnd = get(e.otherEnd(u.getSelf()));
+                    if(!otherEnd.isSeen() && e.getWeight() < otherEnd.getDistance()) {
+                        otherEnd.setDistance(e.getWeight());
+                        otherEnd.setParent(u);
+                        q.add(otherEnd);
+                    }
+                }
+            }
+        }
         return wmst;
     }
 
@@ -137,9 +270,7 @@ public class MST extends GraphAlgorithm<MST.MSTVertex> {
         Set<Vertex> remainingVertex = new HashSet<>();
         Edge edge;
         Vertex fromVertex, toVertex;
-        for(Vertex v : g.getVertexArray()) {
-            remainingVertex.add(v);
-        }
+        Collections.addAll(remainingVertex, g.getVertexArray());
         initialize();
         for(Edge e : g.incident(s)) {
             q.add(e);
@@ -151,7 +282,7 @@ public class MST extends GraphAlgorithm<MST.MSTVertex> {
             toVertex = edge.toVertex();
             setSeen(fromVertex, true);
             if(!getSeen(toVertex)) {
-                setParent(toVertex, fromVertex);
+                setParent(toVertex, get(fromVertex));
                 if(remainingVertex.contains(toVertex)) {
                     mst.add(edge);
                     wmst += edge.getWeight();
@@ -189,7 +320,7 @@ public class MST extends GraphAlgorithm<MST.MSTVertex> {
 
     public static void main(String[] args) throws FileNotFoundException {
         Scanner in;
-        int choice = 2;  // Kruskal
+        int choice = 0;  // Kruskal
         if (args.length == 0 || args[0].equals("-")) {
             in = new Scanner(System.in);
         } else {
@@ -202,9 +333,13 @@ public class MST extends GraphAlgorithm<MST.MSTVertex> {
         Graph g = Graph.readGraph(in);
         Vertex s = g.getVertex(1);
 
-        Timer timer = new Timer();
-        MST m = mst(g, s, choice);
-        System.out.println(m.algorithm + "\n" + m.wmst);
-        System.out.println(timer.end());
+        while(choice < 4) {
+            Timer timer = new Timer();
+            MST m = mst(g, s, choice);
+            System.out.println(m.algorithm + "\n" + m.wmst);
+            System.out.println(timer.end());
+            choice++;
+            System.out.println();
+        }
     }
 }
